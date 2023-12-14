@@ -27,9 +27,8 @@ const reviewRoutes = require("./routes/reviews");
 const userRoutes = require("./routes/users");
 
 // mongoose connection to yelp-camp database
+// const dbUrl = "mongodb://127.0.0.1:27017/yelp-camp"; // local use online
 const dbUrl = process.env.DB_URL;
-// local use online
-// const dbUrl = "mongodb://127.0.0.1:27017/yelp-camp";
 mongoose.connect(dbUrl);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -135,7 +134,6 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 app.use((req, res, next) => {
-  console.log(req.query);
   res.locals.currentUser = req.user;
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
@@ -143,12 +141,6 @@ app.use((req, res, next) => {
 });
 
 // routes
-app.get("/fakeUser", async (req, res) => {
-  const user = new User({ email: "colt@gmail.com", username: "colt" });
-  const newUser = await User.register(user, "chicken");
-  res.send(newUser);
-});
-
 app.use("/", userRoutes);
 app.use("/campgrounds", campgroundRoutes);
 app.use("/campgrounds/:id/reviews", reviewRoutes);
