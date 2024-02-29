@@ -52,7 +52,7 @@ const store = MongoStore.create({
   mongoUrl: process.env.ATLAS_DB_URL, // atlas database
   touchAfter: 24 * 60 * 60,
   crypto: {
-    secret: "thisshouldbeabettersecret!",
+    secret: process.env.SESSION_SECRET,
   },
 });
 
