@@ -30,7 +30,6 @@ module.exports.createCampground = async (req, res, next) => {
   }));
   campground.author = req.user._id;
   await campground.save();
-  console.log(campground);
   req.flash("success", "successfully made a new campground!");
   res.redirect(`/campgrounds/${campground._id}`);
 };
@@ -39,7 +38,6 @@ module.exports.showCampground = async (req, res) => {
   const campground = await Campground.findById(req.params.id)
     .populate({ path: "reviews", populate: { path: "author" } })
     .populate("author");
-  console.log(campground);
   if (!campground) {
     req.flash("error", "cannot find that campground!");
     return res.redirect("/campgrounds");
@@ -59,7 +57,6 @@ module.exports.renderEditForm = async (req, res) => {
 
 module.exports.updateCampground = async (req, res) => {
   const { id } = req.params;
-  console.log(req.body);
   const campground = await Campground.findByIdAndUpdate(id, {
     ...req.body.campground,
   });
@@ -76,14 +73,22 @@ module.exports.updateCampground = async (req, res) => {
   }));
   campground.images.push(...imgs);
   await campground.save();
+
   if (req.body.deleteImages) {
-    for (let filename of req.body.deleteImages) {
-      await cloudinary.uploader.destroy(filename);
-    }
+    const imagesToDelete = req.body.deleteImages.filter(
+      (image) => !image.startsWith("Film/")
+    );
+
+    const deleteFromCloud = imagesToDelete.map((filename) =>
+      cloudinary.uploader.destroy(filename).catch((error) => {
+        console.error("Failed to delete image:", filename, error);
+      })
+    );
+    await Promise.all(deleteFromCloud);
+
     await campground.updateOne({
       $pull: { images: { filename: { $in: req.body.deleteImages } } },
     });
-    console.log(campground);
   }
   req.flash("success", "successfully updated campground!");
   res.redirect(`/campgrounds/${campground._id}`);
@@ -91,7 +96,21 @@ module.exports.updateCampground = async (req, res) => {
 
 module.exports.deleteCampground = async (req, res) => {
   const { id } = req.params;
-  await Campground.findByIdAndDelete(id);
+  const campground = await Campground.findById(id);
+
+  if (campground) {
+    await Campground.findByIdAndDelete(id);
+
+    const deleteFromCloud = campground.images
+      .filter((image) => !image.filename.startsWith("Film/"))
+      .map((image) =>
+        cloudinary.uploader.destroy(image.filename).catch((error) => {
+          console.error("Failed to delete image:", image, error);
+        })
+      );
+    await Promise.all(deleteFromCloud);
+  }
+
   req.flash("success", "successfully deleted campground!");
   res.redirect("/campgrounds");
 };

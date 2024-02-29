@@ -15,31 +15,49 @@ const {
   adjective2,
   noun,
 } = require("./seedHelpers");
+const { cloudinary } = require("../cloudinary/index.js");
 const Campground = require("../models/campground");
+const Review = require("../models/review");
 
 // mongoose connection
-// const dbUrl = "mongodb://127.0.0.1:27017/yelp-camp"; // local use online
-const dbUrl = process.env.DB_URL;
-mongoose.connect(dbUrl);
+// mongoose.connect(process.env.LOCAL_DB_URL); // local database
+mongoose.connect(process.env.ATLAS_DB_URL); // atlas database
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => {
   console.log("database connected");
 });
 
+// const userId = process.env.LOCAL_USER_ID; // local database
+const userId = process.env.ATLAS_USER_ID; // atlas database
+
 const sample = (array) => array[Math.floor(Math.random() * array.length)];
 
 const seedDB = async () => {
+  const campgrounds = await Campground.find({});
+
+  // Delete from cloudinary
+  for (let image of campgrounds.map((campground) => campground.images).flat()) {
+    if (!image.filename.startsWith("Film/")) {
+      try {
+        const result = await cloudinary.uploader.destroy(image.filename);
+        console.log(`Deleted: ${image.filename}`, result);
+      } catch (error) {
+        console.error("Failed to delete image:", image.filename, error);
+      }
+    }
+  }
+
   await Campground.deleteMany({});
-  for (let i = 0; i < 300; i++) {
+  await Review.deleteMany({});
+  for (let i = 0; i < 100; i++) {
     // random num
     const random1000 = Math.floor(Math.random() * 1000);
     const random150 = Math.floor(Math.random() * 150) + 1;
     const price = Math.floor(Math.random() * 20) + 10;
 
     const camp = new Campground({
-      // author: "656a578b1160b321800ee395", // local use only
-      author: "6578c5417edeafce126cf239", // Mongo DB Atlas
+      author: userId,
       location: `${cities[random1000].city}, ${cities[random1000].state}`,
       title: `${sample(descriptors)} ${sample(descriptors)} ${sample(places)}`,
       description: `${sample(adjective1)}, ${sample(adjective2)}, ${sample(
@@ -55,8 +73,8 @@ const seedDB = async () => {
       },
       images: [
         {
-          url: `https://res.cloudinary.com/ddjmamuwr/image/upload/v1701883577/YelpCamp/campground${random150}.jpg`,
-          filename: `YelpCamp/campground${random150}`,
+          url: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1702069435/Film/filmphoto-${random150}.jpg`,
+          filename: `Film/filmphoto-${random150}`,
         },
       ],
     });

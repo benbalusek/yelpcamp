@@ -27,9 +27,8 @@ const reviewRoutes = require("./routes/reviews");
 const userRoutes = require("./routes/users");
 
 // mongoose connection to yelp-camp database
-// const dbUrl = "mongodb://127.0.0.1:27017/yelp-camp"; // local use online
-const dbUrl = process.env.DB_URL;
-mongoose.connect(dbUrl);
+// mongoose.connect(process.env.LOCAL_DB_URL); // local database
+mongoose.connect(process.env.ATLAS_DB_URL); // atlas database
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => {
@@ -49,7 +48,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(mongoSanitize());
 
 const store = MongoStore.create({
-  mongoUrl: dbUrl,
+  // mongoUrl: process.env.LOCAL_DB_URL, // local database
+  mongoUrl: process.env.ATLAS_DB_URL, // atlas database
   touchAfter: 24 * 60 * 60,
   crypto: {
     secret: "thisshouldbeabettersecret!",
@@ -64,7 +64,7 @@ store.on("error", function (e) {
 const sessionConfig = {
   store,
   name: "session",
-  secret: "thisshouldbeabettersecret",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
   cookie: {
@@ -118,7 +118,7 @@ app.use(
         "'self'",
         "blob:",
         "data:",
-        "https://res.cloudinary.com/ddjmamuwr/",
+        `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/`,
         "https://images.unsplash.com/",
       ],
       fontSrc: ["'self'", ...fontSrcUrls],
@@ -160,6 +160,6 @@ app.use((err, req, res, next) => {
 });
 
 // express connection
-app.listen(3000, () => {
-  console.log("Serving on port 3000");
+app.listen(process.env.PORT, () => {
+  console.log(`serving on port ${process.env.PORT}`);
 });
